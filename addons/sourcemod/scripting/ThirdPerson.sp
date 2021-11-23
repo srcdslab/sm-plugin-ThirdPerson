@@ -9,8 +9,12 @@
 #pragma newdecls required
 
 bool g_bThirdPerson[MAXPLAYERS + 1] = { false, ... };
+bool g_bMirror[MAXPLAYERS + 1] = { false, ... };
 
 bool g_bZombieReloaded = false;
+
+ConVar g_cvAllowThirdPerson;
+ConVar g_cvForceCamera;
 
 public Plugin myinfo =
 {
@@ -22,10 +26,33 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	RegConsoleCmd("sm_thirdperson", Command_ThirdPerson, "Toggle thirdperson");
 	RegConsoleCmd("sm_tp", Command_ThirdPerson, "Toggle thirdperson");
+	RegConsoleCmd("sm_mirror", Command_Mirror, "Toggle Rotational Thirdperson view");
 
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_spawn", Event_PlayerSpawn);
+
+	g_cvForceCamera = FindConVar("mp_forcecamera");
+
+	if (GetEngineVersion() == Engine_CSGO)
+	{
+		g_cvAllowThirdPerson = FindConVar("sv_allow_thirdperson");
+		if(g_cvAllowThirdPerson == INVALID_HANDLE)
+			SetFailState("sv_allow_thirdperson not found!");
+		
+		SetConVarInt(g_cvAllowThirdPerson, 1);
+
+		HookConVarChange(g_cvAllowThirdPerson, OnConVarChanged);
+	}
+}
+
+public void OnConVarChanged(ConVar cvar, const char[] oldVal, const char[] newVal)
+{
+	if(cvar == g_cvAllowThirdPerson && StringToInt(newVal) != 1)
+	{
+		SetConVarInt(g_cvAllowThirdPerson, 1);
+	}
 }
 
 public void OnAllPluginsLoaded()
@@ -54,10 +81,28 @@ public void OnClientPutInServer(int client)
 	g_bThirdPerson[client] = false;
 }
 
+public Action Command_Mirror(int client, int args)
+{
+	if(!IsValidClient(client, true))
+	{
+		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
+		return Plugin_Handled;
+	}
+
+	if (!g_bMirror[client])
+		MirrorOn(client);
+	else
+		MirrorOff(client);
+	return Plugin_Handled;
+}
+
 public Action Command_ThirdPerson(int client, int args)
 {
 	if(!IsValidClient(client, true))
+	{
+		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
 		return Plugin_Handled;
+	}
 
 	if(g_bThirdPerson[client])
 		ThirdPersonOff(client);
@@ -75,12 +120,15 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 	char sWeapon[64];
 	GetEventString(event, "weapon", sWeapon, sizeof(sWeapon));
 
-	if (IsValidClient(client, _, false) && g_bThirdPerson[client])
+	if (IsValidClient(client, _, false) && g_bThirdPerson[client] || g_bMirror[client])
 	{
 		if (g_bZombieReloaded && IsValidClient(attacker, _, false) && StrEqual(sWeapon, "zombie_claws_of_death", false))
 			return Plugin_Continue;
 
-		ThirdPersonOff(client, true);
+		if (g_bThirdPerson[client])
+			ThirdPersonOff(client, true);
+		if (g_bMirror[client])
+			MirrorOff(client, true);
 
 		int currentTeam = GetClientTeam(client);
 		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
@@ -95,36 +143,86 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (IsValidClient(client, _, false) && g_bThirdPerson[client])
-		ThirdPersonOff(client, true);
+	if (IsValidClient(client, _, false))
+	{
+		if (g_bThirdPerson[client])
+			ThirdPersonOff(client, true);
+		if (g_bMirror[client])
+			MirrorOff(client, true);
+	}
 	return Plugin_Continue;
 }
 
 void ThirdPersonOn(int client)
 {
-	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", 0);
-	SetEntProp(client, Prop_Send, "m_iObserverMode", 1);
-	SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 0);
-	SetEntProp(client, Prop_Send, "m_iFOV", 120);
+	if (GetEngineVersion() == Engine_CSGO)
+	{
+		ClientCommand(client, "thirdperson");
+	}
+	else
+	{
+		SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", 0);
+		SetEntProp(client, Prop_Send, "m_iObserverMode", 1);
+		SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 0);
+		SetEntProp(client, Prop_Send, "m_iFOV", 120);
+	}
 
 	g_bThirdPerson[client] = true;
 
-	CPrintToChat(client, "{cyan}[ThirdPerson]{default} is {green}ON{default}.");
+	CPrintToChat(client, "{darkblue}[ThirdPerson]{default} is {green}ON{default}.");
 }
 
 void ThirdPersonOff(int client, bool notify = true)
 {
-	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", client);
-	SetEntProp(client, Prop_Send, "m_iObserverMode", 0);
-	SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 1);
-	SetEntProp(client, Prop_Send, "m_iFOV", 90);
+	if (GetEngineVersion() == Engine_CSGO)
+	{
+		ClientCommand(client, "firstperson");
+	}
+	else
+	{
+		SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", client);
+		SetEntProp(client, Prop_Send, "m_iObserverMode", 0);
+		SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 1);
+		SetEntProp(client, Prop_Send, "m_iFOV", 90);
+	}
 
 	g_bThirdPerson[client] = false;
 
 	ClientFullUpdate(client);
 
 	if (notify)
-		CPrintToChat(client, "{cyan}[ThirdPerson]{default} is {red}OFF{default}.");
+		CPrintToChat(client, "{darkblue}[ThirdPerson]{default} is {red}OFF{default}.");
+}
+
+stock void MirrorOn(int client, bool notify = true)
+{
+	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", 0); 
+	SetEntProp(client, Prop_Send, "m_iObserverMode", 1);
+	SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 0);
+	SetEntProp(client, Prop_Send, "m_iFOV", 120);
+	SendConVarValue(client, g_cvForceCamera, "1");
+
+	g_bMirror[client] = true;
+
+	if (notify)
+		CPrintToChat(client, "{darkblue}[Mirror]{default} is {red}ON{default}.");
+}
+
+stock void MirrorOff(int client, bool notify = true)
+{
+	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", -1);
+	SetEntProp(client, Prop_Send, "m_iObserverMode", 0);
+	SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 1);
+	SetEntProp(client, Prop_Send, "m_iFOV", 90);
+
+	char sValue[6];
+	GetConVarString(g_cvForceCamera, sValue, 6);
+	SendConVarValue(client, g_cvForceCamera, sValue);
+
+	g_bMirror[client] = false;
+
+	if (notify)
+		CPrintToChat(client, "{darkblue}[Mirror]{default} is {red}OFF{default}.");
 }
 
 stock bool IsValidClient(int client, bool bAlive = false, bool checkTeam = true)
