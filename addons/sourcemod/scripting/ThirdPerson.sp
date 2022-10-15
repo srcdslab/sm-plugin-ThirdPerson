@@ -125,8 +125,17 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 
 	if (IsValidClient(client, _, false) && g_bThirdPerson[client] || g_bMirror[client])
 	{
-		if (g_bZombieReloaded && IsValidClient(attacker, _, false) && StrEqual(sWeapon, "zombie_claws_of_death", false))
-			return Plugin_Continue;
+		if (g_bZombieReloaded && IsValidClient(attacker, _, false)
+		{
+			char sValue[256] = "zombie_claws_of_death";
+
+			ConVar cvInfectEventWeapon = FindConVar("zr_infect_event_weapon");
+			if (cvInfectEventWeapon != null)
+				GetConVarString(cvInfectEventWeapon, sValue, sizeof(sValue));
+
+			if StrEqual(sWeapon, sValue, false)
+				return Plugin_Continue;
+		}
 
 		if (g_bThirdPerson[client])
 			ThirdPersonOff(client, true);
