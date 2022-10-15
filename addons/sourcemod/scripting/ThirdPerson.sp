@@ -15,6 +15,7 @@ bool g_bThirdPerson[MAXPLAYERS + 1] = { false, ... };
 bool g_bMirror[MAXPLAYERS + 1] = { false, ... };
 
 bool g_bZombieReloaded = false;
+bool g_bFullUpdate = false;
 
 ConVar g_cvAllowThirdPerson;
 ConVar g_cvForceCamera;
@@ -61,6 +62,7 @@ public void OnConVarChanged(ConVar cvar, const char[] oldVal, const char[] newVa
 public void OnAllPluginsLoaded()
 {
 	g_bZombieReloaded = LibraryExists("zombiereloaded");
+	g_bFullUpdate = LibraryExists("FullUpdate");
 }
 
 public void OnLibraryAdded(const char[] name)
@@ -69,6 +71,10 @@ public void OnLibraryAdded(const char[] name)
 	{
 		g_bZombieReloaded = true;
 	}
+	if (StrEqual(name, "FullUpdate"))
+	{
+		g_bFullUpdate = true;
+	}
 }
 
 public void OnLibraryRemoved(const char[] name)
@@ -76,6 +82,10 @@ public void OnLibraryRemoved(const char[] name)
 	if (StrEqual(name, "zombiereloaded"))
 	{
 		g_bZombieReloaded = false;
+	}
+	if (StrEqual(name, "FullUpdate"))
+	{
+		g_bFullUpdate = false;
 	}
 }
 
@@ -125,7 +135,7 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 
 	if (IsValidClient(client, _, false) && g_bThirdPerson[client] || g_bMirror[client])
 	{
-		if (g_bZombieReloaded && IsValidClient(attacker, _, false)
+		if (g_bZombieReloaded && IsValidClient(attacker, _, false))
 		{
 			char sValue[256] = "zombie_claws_of_death";
 
@@ -133,7 +143,7 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 			if (cvInfectEventWeapon != null)
 				GetConVarString(cvInfectEventWeapon, sValue, sizeof(sValue));
 
-			if StrEqual(sWeapon, sValue, false)
+			if (StrEqual(sWeapon, sValue, false))
 				return Plugin_Continue;
 		}
 
@@ -200,7 +210,8 @@ void ThirdPersonOff(int client, bool notify = true)
 
 	g_bThirdPerson[client] = false;
 
-	ClientFullUpdate(client);
+	if (g_bFullUpdate)
+		ClientFullUpdate(client);
 
 	if (notify)
 		CPrintToChat(client, "{darkblue}[ThirdPerson]{default} is {red}OFF{default}.");
