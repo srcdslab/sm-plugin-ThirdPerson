@@ -2,9 +2,12 @@
 
 #include <sourcemod>
 #include <cstrike>
-#include <FullUpdate>
 #include <multicolors>
 #include <zombiereloaded>
+
+#undef REQUIRE_PLUGIN
+#include <FullUpdate>
+#define REQUIRE_PLUGIN
 
 #pragma newdecls required
 
