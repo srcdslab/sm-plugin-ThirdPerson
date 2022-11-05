@@ -2,6 +2,7 @@
 
 #include <sourcemod>
 #include <cstrike>
+
 #include <multicolors>
 #include <zombiereloaded>
 
@@ -25,7 +26,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.1"
+	version = "1.1.0"
 }
 
 public void OnPluginStart()
