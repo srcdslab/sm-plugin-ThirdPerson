@@ -2,12 +2,10 @@
 
 #include <sourcemod>
 #include <cstrike>
-
 #include <multicolors>
-#include <zombiereloaded>
 
 #undef REQUIRE_PLUGIN
-#include <FullUpdate>
+#tryinclude <FullUpdate>
 #define REQUIRE_PLUGIN
 
 #pragma newdecls required
@@ -24,9 +22,19 @@ ConVar g_cvForceCamera;
 public Plugin myinfo =
 {
 	name = "ThirdPerson",
-	author = "BotoX, maxime1907",
+	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.1.0"
+	version = "1.2"
+}
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	RegPluginLibrary("ThirdPerson");
+
+	CreateNative("Mirror_Status", Native_Mirror);
+	CreateNative("ThirdPerson_Status", Native_ThirdPerson);
+
+	return APLRes_Success;
 }
 
 public void OnPluginStart()
@@ -97,29 +105,36 @@ public void OnClientPutInServer(int client)
 
 public Action Command_Mirror(int client, int args)
 {
-	if(!IsValidClient(client, true))
-	{
-		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
-		return Plugin_Handled;
-	}
-
-	if (!g_bMirror[client])
-		MirrorOn(client);
-	else
-		MirrorOff(client);
-	return Plugin_Handled;
-}
-
-public Action Command_ThirdPerson(int client, int args)
-{
-	if(!IsValidClient(client, true))
+	if(!IsValidClient(client, true, true))
 	{
 		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
 		return Plugin_Handled;
 	}
 
 	if(g_bThirdPerson[client])
-		ThirdPersonOff(client);
+		ThirdPersonOff(client, false);
+
+	if (!g_bMirror[client])
+		MirrorOn(client);
+	else
+		MirrorOff(client);
+	
+	return Plugin_Handled;
+}
+
+public Action Command_ThirdPerson(int client, int args)
+{
+	if(!IsValidClient(client, true, true))
+	{
+		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
+		return Plugin_Handled;
+	}
+
+	if (g_bMirror[client])
+		MirrorOff(client);
+
+	if(g_bThirdPerson[client])
+		ThirdPersonOff(client, true);
 	else
 		ThirdPersonOn(client);
 	
@@ -129,14 +144,10 @@ public Action Command_ThirdPerson(int client, int args)
 public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
-
-	char sWeapon[64];
-	GetEventString(event, "weapon", sWeapon, sizeof(sWeapon));
-
-	if (IsValidClient(client, _, false) && g_bThirdPerson[client] || g_bMirror[client])
+	if (IsValidClient(client, true, false) && g_bThirdPerson[client] || g_bMirror[client])
 	{
-		if (g_bZombieReloaded && IsValidClient(attacker, _, false))
+		int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
+		if (g_bZombieReloaded && IsValidClient(attacker, false))
 		{
 			char sValue[256] = "zombie_claws_of_death";
 
@@ -144,21 +155,16 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 			if (cvInfectEventWeapon != null)
 				GetConVarString(cvInfectEventWeapon, sValue, sizeof(sValue));
 
-			if (StrEqual(sWeapon, sValue, false))
-				return Plugin_Continue;
+			char sWeapon[64];
+			GetEventString(event, "weapon", sWeapon, sizeof(sWeapon));
+
+			if (!StrEqual(sWeapon, sValue, false))
+				ResetClient(client);
 		}
-
-		if (g_bThirdPerson[client])
-			ThirdPersonOff(client, true);
-		if (g_bMirror[client])
-			MirrorOff(client, true);
-
-		int currentTeam = GetClientTeam(client);
-		ChangeClientTeam(client, CS_TEAM_SPECTATOR);
-		if (!g_bZombieReloaded)
-			CS_SwitchTeam(client, currentTeam);
 		else
-			CS_SwitchTeam(client, CS_TEAM_T);
+		{
+			ResetClient(client);
+		}
 	}
 	return Plugin_Continue;
 }
@@ -166,12 +172,9 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (IsValidClient(client, _, false))
+	if (IsValidClient(client))
 	{
-		if (g_bThirdPerson[client])
-			ThirdPersonOff(client, true);
-		if (g_bMirror[client])
-			MirrorOff(client, true);
+		ResetClient(client);
 	}
 	return Plugin_Continue;
 }
@@ -211,11 +214,21 @@ void ThirdPersonOff(int client, bool notify = true)
 
 	g_bThirdPerson[client] = false;
 
+#if defined _FullUpdate_Included
 	if (g_bFullUpdate)
 		ClientFullUpdate(client);
+#endif
 
 	if (notify)
 		CPrintToChat(client, "{darkblue}[ThirdPerson]{default} is {red}OFF{default}.");
+}
+
+stock void ResetClient(int client)
+{
+	if (g_bThirdPerson[client])
+		ThirdPersonOff(client, true);
+	if (g_bMirror[client])
+		MirrorOff(client, true);
 }
 
 stock void MirrorOn(int client, bool notify = true)
@@ -229,7 +242,7 @@ stock void MirrorOn(int client, bool notify = true)
 	g_bMirror[client] = true;
 
 	if (notify)
-		CPrintToChat(client, "{darkblue}[Mirror]{default} is {red}ON{default}.");
+		CPrintToChat(client, "{darkblue}[Mirror]{default} is {green}ON{default}.");
 }
 
 stock void MirrorOff(int client, bool notify = true)
@@ -249,18 +262,23 @@ stock void MirrorOff(int client, bool notify = true)
 		CPrintToChat(client, "{darkblue}[Mirror]{default} is {red}OFF{default}.");
 }
 
-stock bool IsValidClient(int client, bool bAlive = false, bool checkTeam = true)
+public int Native_Mirror(Handle plugin, int params)
 {
-	if (client >= 1 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client) && !IsFakeClient(client) && (bAlive == false || IsPlayerAlive(client)))
+	int client = GetNativeCell(1);
+	return g_bThirdPerson[client];
+}
+
+public int Native_ThirdPerson(Handle plugin, int params)
+{
+	int client = GetNativeCell(1);
+	return g_bMirror[client];
+}
+
+stock bool IsValidClient(int client, bool bots = false, bool bAlive = false)
+{
+	if (client >= 1 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client) && (bots == false || !IsFakeClient(client)) && (bAlive == false || IsPlayerAlive(client)))
 	{
-		if (checkTeam)
-		{
-			int currentTeam = GetClientTeam(client);
-			if (currentTeam == CS_TEAM_T || currentTeam == CS_TEAM_CT)
-				return true;
-		}
-		else
-			return true;
+		return true;
 	}
 	return false;
 }
