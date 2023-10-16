@@ -24,7 +24,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.2"
+	version = "1.2.1"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -155,15 +155,17 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 			if (cvInfectEventWeapon != null)
 				GetConVarString(cvInfectEventWeapon, sValue, sizeof(sValue));
 
+			delete cvInfectEventWeapon;
+
 			char sWeapon[64];
 			GetEventString(event, "weapon", sWeapon, sizeof(sWeapon));
 
 			if (!StrEqual(sWeapon, sValue, false))
-				ResetClient(client);
+				ResetClient(client, true);
 		}
 		else
 		{
-			ResetClient(client);
+			ResetClient(client, true);
 		}
 	}
 	return Plugin_Continue;
@@ -223,12 +225,40 @@ void ThirdPersonOff(int client, bool notify = true)
 		CPrintToChat(client, "{darkblue}[ThirdPerson]{default} is {red}OFF{default}.");
 }
 
-stock void ResetClient(int client)
+stock void ResetClient(int client, bool bFixUI = false)
 {
 	if (g_bThirdPerson[client])
 		ThirdPersonOff(client, true);
 	if (g_bMirror[client])
 		MirrorOff(client, true);
+	if (bFixUI)
+		FixClientUI(client);
+}
+
+stock void FixClientUI(int client)
+{
+	int currentTeam = GetClientTeam(client);
+	ChangeClientTeam(client, CS_TEAM_SPECTATOR);
+	if (!g_bZombieReloaded)
+		CS_SwitchTeam(client, currentTeam);
+	else
+	{
+		CS_SwitchTeam(client, CS_TEAM_T);
+		if (!IsPlayerAlive(client))
+		{
+			ConVar cvRespawn = FindConVar("zr_respawn");
+			if (cvRespawn.IntValue == 1)
+				RequestFrame(RespawnClient, client);
+
+			delete cvRespawn;
+		}
+	}
+}
+
+stock void RespawnClient(int client)
+{
+	if (IsClientInGame(client))
+		CS_RespawnPlayer(client);
 }
 
 stock void MirrorOn(int client, bool notify = true)
