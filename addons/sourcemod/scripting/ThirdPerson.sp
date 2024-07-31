@@ -5,6 +5,7 @@
 #include <multicolors>
 
 #undef REQUIRE_PLUGIN
+#tryinclude <zombiereloaded>
 #tryinclude <FullUpdate>
 #define REQUIRE_PLUGIN
 
@@ -14,6 +15,8 @@ bool g_bThirdPerson[MAXPLAYERS + 1] = { false, ... };
 bool g_bMirror[MAXPLAYERS + 1] = { false, ... };
 
 bool g_bZombieReloaded = false;
+bool g_bZombieSpawned = false;
+bool g_bTeamManager = false;
 bool g_bFullUpdate = false;
 
 ConVar g_cvAllowThirdPerson;
@@ -24,7 +27,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.2.1"
+	version = "1.3.1"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -43,21 +46,11 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_tp", Command_ThirdPerson, "Toggle thirdperson");
 	RegConsoleCmd("sm_mirror", Command_Mirror, "Toggle Rotational Thirdperson view");
 
+	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 
 	g_cvForceCamera = FindConVar("mp_forcecamera");
-
-	if (GetEngineVersion() == Engine_CSGO)
-	{
-		g_cvAllowThirdPerson = FindConVar("sv_allow_thirdperson");
-		if(g_cvAllowThirdPerson == INVALID_HANDLE)
-			SetFailState("sv_allow_thirdperson not found!");
-		
-		SetConVarInt(g_cvAllowThirdPerson, 1);
-
-		HookConVarChange(g_cvAllowThirdPerson, OnConVarChanged);
-	}
 }
 
 public void OnConVarChanged(ConVar cvar, const char[] oldVal, const char[] newVal)
@@ -71,16 +64,21 @@ public void OnConVarChanged(ConVar cvar, const char[] oldVal, const char[] newVa
 public void OnAllPluginsLoaded()
 {
 	g_bZombieReloaded = LibraryExists("zombiereloaded");
+	g_bTeamManager = LibraryExists("TeamManager");
 	g_bFullUpdate = LibraryExists("FullUpdate");
 }
 
 public void OnLibraryAdded(const char[] name)
 {
-	if (StrEqual(name, "zombiereloaded"))
+	if (strcmp(name, "zombiereloaded", false) == 0)
 	{
 		g_bZombieReloaded = true;
 	}
-	if (StrEqual(name, "FullUpdate"))
+	if (strcmp(name, "TeamManager", false) == 0)
+	{
+		g_bTeamManager = true;
+	}
+	if (strcmp(name, "FullUpdate", false) == 0)
 	{
 		g_bFullUpdate = true;
 	}
@@ -88,11 +86,15 @@ public void OnLibraryAdded(const char[] name)
 
 public void OnLibraryRemoved(const char[] name)
 {
-	if (StrEqual(name, "zombiereloaded"))
+	if (strcmp(name, "zombiereloaded", false) == 0)
 	{
 		g_bZombieReloaded = false;
 	}
-	if (StrEqual(name, "FullUpdate"))
+	if (strcmp(name, "TeamManager", false) == 0)
+	{
+		g_bTeamManager = false;
+	}
+	if (strcmp(name, "FullUpdate", false) == 0)
 	{
 		g_bFullUpdate = false;
 	}
@@ -103,6 +105,11 @@ public void OnClientPutInServer(int client)
 	g_bThirdPerson[client] = false;
 }
 
+public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+{
+	g_bZombieSpawned = false;
+}
+
 public Action Command_Mirror(int client, int args)
 {
 	if(!IsValidClient(client, true, true))
@@ -110,6 +117,14 @@ public Action Command_Mirror(int client, int args)
 		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
 		return Plugin_Handled;
 	}
+
+#if defined _zr_included
+	if(!g_bZombieSpawned)
+	{
+		CReplyToCommand(client, "{green}[SM] {default}You may not use this command as there is no zombie spawned.");
+		return Plugin_Handled;
+	}
+#endif
 
 	if(g_bThirdPerson[client])
 		ThirdPersonOff(client, false);
@@ -129,6 +144,14 @@ public Action Command_ThirdPerson(int client, int args)
 		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
 		return Plugin_Handled;
 	}
+
+#if defined _zr_included
+	if(!g_bZombieSpawned)
+	{
+		CReplyToCommand(client, "{green}[SM] {default}You may not use this command as there is no zombie spawned.");
+		return Plugin_Handled;
+	}
+#endif
 
 	if (g_bMirror[client])
 		MirrorOff(client);
@@ -181,19 +204,22 @@ public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadca
 	return Plugin_Continue;
 }
 
+#if defined _zr_included
+public Action ZR_OnClientInfect(int &client, int &attacker, bool &motherInfect, bool &respawnOverride, bool &respawn)
+{
+	if (motherInfect && g_bTeamManager)
+		g_bZombieSpawned = true;
+	
+	return Plugin_Continue;
+}
+#endif
+
 void ThirdPersonOn(int client)
 {
-	if (GetEngineVersion() == Engine_CSGO)
-	{
-		ClientCommand(client, "thirdperson");
-	}
-	else
-	{
-		SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", 0);
-		SetEntProp(client, Prop_Send, "m_iObserverMode", 1);
-		SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 0);
-		SetEntProp(client, Prop_Send, "m_iFOV", 120);
-	}
+	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", 0);
+	SetEntProp(client, Prop_Send, "m_iObserverMode", 1);
+	SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 0);
+	SetEntProp(client, Prop_Send, "m_iFOV", 120);
 
 	g_bThirdPerson[client] = true;
 
@@ -202,17 +228,10 @@ void ThirdPersonOn(int client)
 
 void ThirdPersonOff(int client, bool notify = true)
 {
-	if (GetEngineVersion() == Engine_CSGO)
-	{
-		ClientCommand(client, "firstperson");
-	}
-	else
-	{
-		SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", client);
-		SetEntProp(client, Prop_Send, "m_iObserverMode", 0);
-		SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 1);
-		SetEntProp(client, Prop_Send, "m_iFOV", 90);
-	}
+	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", client);
+	SetEntProp(client, Prop_Send, "m_iObserverMode", 0);
+	SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 1);
+	SetEntProp(client, Prop_Send, "m_iFOV", 90);
 
 	g_bThirdPerson[client] = false;
 
