@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.3.1"
+	version = "1.3.2"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -74,11 +74,11 @@ public void OnLibraryAdded(const char[] name)
 	{
 		g_bZombieReloaded = true;
 	}
-	if (strcmp(name, "TeamManager", false) == 0)
+	else if (strcmp(name, "TeamManager", false) == 0)
 	{
 		g_bTeamManager = true;
 	}
-	if (strcmp(name, "FullUpdate", false) == 0)
+	else if (strcmp(name, "FullUpdate", false) == 0)
 	{
 		g_bFullUpdate = true;
 	}
@@ -90,11 +90,11 @@ public void OnLibraryRemoved(const char[] name)
 	{
 		g_bZombieReloaded = false;
 	}
-	if (strcmp(name, "TeamManager", false) == 0)
+	else if (strcmp(name, "TeamManager", false) == 0)
 	{
 		g_bTeamManager = false;
 	}
-	if (strcmp(name, "FullUpdate", false) == 0)
+	else if (strcmp(name, "FullUpdate", false) == 0)
 	{
 		g_bFullUpdate = false;
 	}
