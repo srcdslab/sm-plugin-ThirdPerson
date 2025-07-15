@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.3.2"
+	version = "1.3.3"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -205,12 +205,10 @@ public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadca
 }
 
 #if defined _zr_included
-public Action ZR_OnClientInfect(int &client, int &attacker, bool &motherInfect, bool &respawnOverride, bool &respawn)
+public void ZR_OnClientInfected(int client, int attacker, bool motherInfect, bool respawnOverride, bool respawn)
 {
 	if (motherInfect && g_bTeamManager)
 		g_bZombieSpawned = true;
-	
-	return Plugin_Continue;
 }
 #endif
 
