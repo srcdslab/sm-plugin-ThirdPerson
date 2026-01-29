@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.3.3"
+	version = "1.3.4"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
