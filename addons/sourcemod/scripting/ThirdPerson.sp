@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.3.4"
+	version = "1.3.5"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -103,6 +103,7 @@ public void OnLibraryRemoved(const char[] name)
 public void OnClientPutInServer(int client)
 {
 	g_bThirdPerson[client] = false;
+	g_bMirror[client] = false;
 }
 
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
@@ -284,7 +285,9 @@ stock void MirrorOn(int client, bool notify = true)
 	SetEntProp(client, Prop_Send, "m_iObserverMode", 1);
 	SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 0);
 	SetEntProp(client, Prop_Send, "m_iFOV", 120);
-	SendConVarValue(client, g_cvForceCamera, "1");
+
+	if (!IsFakeClient(client))
+		SendConVarValue(client, g_cvForceCamera, "1");
 
 	g_bMirror[client] = true;
 
@@ -299,9 +302,12 @@ stock void MirrorOff(int client, bool notify = true)
 	SetEntProp(client, Prop_Send, "m_bDrawViewmodel", 1);
 	SetEntProp(client, Prop_Send, "m_iFOV", 90);
 
-	char sValue[6];
-	GetConVarString(g_cvForceCamera, sValue, 6);
-	SendConVarValue(client, g_cvForceCamera, sValue);
+	if (!IsFakeClient(client))
+	{
+		char sValue[6];
+		GetConVarString(g_cvForceCamera, sValue, 6);
+		SendConVarValue(client, g_cvForceCamera, sValue);
+	}
 
 	g_bMirror[client] = false;
 
@@ -312,13 +318,13 @@ stock void MirrorOff(int client, bool notify = true)
 public int Native_Mirror(Handle plugin, int params)
 {
 	int client = GetNativeCell(1);
-	return g_bThirdPerson[client];
+	return g_bMirror[client];
 }
 
 public int Native_ThirdPerson(Handle plugin, int params)
 {
 	int client = GetNativeCell(1);
-	return g_bMirror[client];
+	return g_bThirdPerson[client];
 }
 
 stock bool IsValidClient(int client, bool bots = false, bool bAlive = false)
