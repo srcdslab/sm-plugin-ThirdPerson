@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.3.5"
+	version = "1.3.6"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -106,6 +106,12 @@ public void OnClientPutInServer(int client)
 	g_bMirror[client] = false;
 }
 
+public void OnClientDisconnect(int client)
+{
+	g_bThirdPerson[client] = false;
+	g_bMirror[client] = false;
+}
+
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	g_bZombieSpawned = false;
@@ -168,7 +174,7 @@ public Action Command_ThirdPerson(int client, int args)
 public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (IsValidClient(client, true, false) && g_bThirdPerson[client] || g_bMirror[client])
+	if (IsValidClient(client, true, false) && (g_bThirdPerson[client] || g_bMirror[client]))
 	{
 		int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 		if (g_bZombieReloaded && IsValidClient(attacker, false))
@@ -198,7 +204,7 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (IsValidClient(client))
+	if (IsValidClient(client, true))
 	{
 		ResetClient(client);
 	}
