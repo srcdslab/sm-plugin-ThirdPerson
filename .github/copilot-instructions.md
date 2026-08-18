@@ -7,14 +7,13 @@ This repository contains a SourceMod plugin written in SourcePawn that allows pl
 ### Key Components
 - **Main Plugin**: `addons/sourcemod/scripting/ThirdPerson.sp` - Core plugin implementation
 - **Include File**: `addons/sourcemod/scripting/include/ThirdPerson.inc` - Native functions for plugin integration
-- **Build Configuration**: `sourceknight.yaml` - Build system configuration
+- **Build Configuration**: `.github/workflows/ci.yml` - Build system configuration (native GitHub Actions)
 
 ## Development Environment
 
 ### Required Tools
-- **SourceMod 1.11+**: The scripting platform for Source engine games
-- **SourceKnight**: Build tool for SourceMod plugins (configured via `sourceknight.yaml`)
-- **SourcePawn Compiler**: Latest compatible version (spcomp)
+- **SourceMod 1.12**: The scripting platform for Source engine games
+- **SourcePawn Compiler**: `spcomp` via `rumblefrog/setup-sp` (used in CI)
 
 ### Dependencies
 The plugin depends on these SourceMod extensions/plugins:
@@ -23,16 +22,11 @@ The plugin depends on these SourceMod extensions/plugins:
 - **ZombieReloaded**: Optional - for Zombie mod integration (`#include <zombiereloaded>`)
 
 ### Build System
-This project uses SourceKnight as its build system:
-```yaml
-# sourceknight.yaml configures dependencies and build targets
-project:
-  name: ThirdPerson
-  dependencies: [sourcemod, multicolors, FullUpdate]
-  targets: [ThirdPerson]
-```
+This project builds via native GitHub Actions (`.github/workflows/ci.yml`):
+- Dependencies (MultiColors, FullUpdate) are cloned directly from their GitHub repos into `addons/sourcemod/scripting/include`.
+- `spcomp` compiles `ThirdPerson.sp` into `addons/sourcemod/plugins/ThirdPerson.smx`.
 
-**Building**: The CI system uses `maxime1907/action-sourceknight@v1` GitHub Action for builds.
+To build locally, install SourceMod 1.12 and `spcomp`, then compile with the includes from the dependency repos above on your include path.
 
 ## Code Style & Conventions
 
@@ -212,17 +206,17 @@ addons/sourcemod/
 
 ## CI/CD Pipeline
 
-The repository uses GitHub Actions with SourceKnight:
-- Automatic building on push/PR
+The repository uses native GitHub Actions (`.github/workflows/ci.yml`):
+- Automatic building on push/PR via `rumblefrog/setup-sp`
 - Artifact generation for releases
-- Version tagging for releases
+- Version tagging (`latest`) and releases on pushes to `master`/`main`
 
-When modifying build configuration, update `sourceknight.yaml` accordingly.
+When modifying build configuration, update `.github/workflows/ci.yml` accordingly.
 
 ## Getting Started for New Contributors
 
-1. **Environment Setup**: Ensure SourceMod 1.11+ is available for testing
-2. **Clone & Build**: Use the SourceKnight build system (`sourceknight.yaml`)
+1. **Environment Setup**: Ensure SourceMod 1.12 is available for testing
+2. **Clone & Build**: Use the GitHub Actions workflow (`.github/workflows/ci.yml`) or compile locally with `spcomp`
 3. **Code Review**: Follow the established patterns in `ThirdPerson.sp`
 4. **Testing**: Validate changes on a development server with the target game
 5. **Integration**: Test compatibility with optional dependencies (ZombieReloaded, etc.)
