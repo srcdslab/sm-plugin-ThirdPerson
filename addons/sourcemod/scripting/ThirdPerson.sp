@@ -18,16 +18,18 @@ bool g_bZombieReloaded = false;
 bool g_bZombieSpawned = false;
 bool g_bTeamManager = false;
 bool g_bFullUpdate = false;
+bool g_bRoundEnding = false;
 
 ConVar g_cvAllowThirdPerson;
 ConVar g_cvForceCamera;
+ConVar g_cvDebug;
 
 public Plugin myinfo =
 {
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.3.6"
+	version = "1.4.0"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -46,11 +48,16 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_tp", Command_ThirdPerson, "Toggle thirdperson");
 	RegConsoleCmd("sm_mirror", Command_Mirror, "Toggle Rotational Thirdperson view");
 
+	g_cvDebug = CreateConVar("sm_thirdperson_debug", "0", "Log detailed ThirdPerson & round diagnostics to help track the round-restart exploit (issue #10).", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+
 	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 
 	g_cvForceCamera = FindConVar("mp_forcecamera");
+
+	AutoExecConfig(true, "ThirdPerson");
 }
 
 public void OnConVarChanged(ConVar cvar, const char[] oldVal, const char[] newVal)
@@ -115,6 +122,27 @@ public void OnClientDisconnect(int client)
 public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
 	g_bZombieSpawned = false;
+	g_bRoundEnding = false;
+}
+
+public void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+{
+	g_bRoundEnding = true;
+
+	if (!g_cvDebug.BoolValue)
+		return;
+
+	LogMessage("[ThirdPerson] round_end | winner=%d reason=%d | T=%d/%d alive, CT=%d/%d alive",
+		event.GetInt("winner"), event.GetInt("reason"),
+		CountTeam(CS_TEAM_T, true), CountTeam(CS_TEAM_T, false),
+		CountTeam(CS_TEAM_CT, true), CountTeam(CS_TEAM_CT, false));
+
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidClient(i, true) && (g_bThirdPerson[i] || g_bMirror[i]))
+			LogMessage("[ThirdPerson]  - %L still flagged (thirdperson=%d mirror=%d team=%d alive=%d)",
+				i, g_bThirdPerson[i], g_bMirror[i], GetClientTeam(i), IsPlayerAlive(i));
+	}
 }
 
 public Action Command_Mirror(int client, int args)
@@ -176,6 +204,11 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
 	if (IsValidClient(client, true, false) && (g_bThirdPerson[client] || g_bMirror[client]))
 	{
+		if (g_cvDebug.BoolValue)
+			LogMessage("[ThirdPerson] player_death | %L thirdperson=%d mirror=%d team=%d roundEnding=%d teammatesAlive=%d",
+				client, g_bThirdPerson[client], g_bMirror[client], GetClientTeam(client),
+				g_bRoundEnding, CountTeam(GetClientTeam(client), true, client));
+
 		int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 		if (g_bZombieReloaded && IsValidClient(attacker, false))
 		{
@@ -262,21 +295,62 @@ stock void ResetClient(int client, bool bFixUI = false)
 stock void FixClientUI(int client)
 {
 	int currentTeam = GetClientTeam(client);
-	ChangeClientTeam(client, CS_TEAM_SPECTATOR);
+	if (currentTeam <= CS_TEAM_SPECTATOR)
+		return;
+
+	/**
+	 * Never juggle the client's team while the round is ending, or once this
+	 * client's team has no other alive members (the round is about to be
+	 * decided). ChangeClientTeam() runs CS' generic team-change path, which
+	 * re-enters the CCSGameRules win-condition checks; racing that against
+	 * ZR's own round-end handling is what lets players "restart" the round.
+	 * See https://github.com/srcdslab/sm-plugin-ThirdPerson/issues/10
+	 *
+	 * In that situation we only refresh the client locally (observer props
+	 * were already cleared by ThirdPersonOff()/MirrorOff()) and let
+	 * ZR / TeamManager own the team state.
+	 */
+	if (g_bRoundEnding || CountTeam(currentTeam, true, client) == 0)
+	{
+		if (g_cvDebug.BoolValue)
+			LogMessage("[ThirdPerson] FixClientUI: skipped team refresh for %L (roundEnding=%d, teammatesAlive=%d)",
+				client, g_bRoundEnding, CountTeam(currentTeam, true, client));
+
+#if defined _FullUpdate_Included
+		if (g_bFullUpdate)
+			ClientFullUpdate(client);
+#endif
+		return;
+	}
+
+	/**
+	 * CS_SwitchTeam() rebuilds the client's team/observer state without
+	 * killing the player and without triggering the team-change /
+	 * win-condition game logic that ChangeClientTeam() fires.
+	 */
+	CS_SwitchTeam(client, CS_TEAM_SPECTATOR);
+
 	if (!g_bZombieReloaded)
+	{
 		CS_SwitchTeam(client, currentTeam);
+	}
 	else
 	{
 		CS_SwitchTeam(client, CS_TEAM_T);
 		if (!IsPlayerAlive(client))
 		{
 			ConVar cvRespawn = FindConVar("zr_respawn");
-			if (cvRespawn.IntValue == 1)
+			if (cvRespawn != null && cvRespawn.IntValue == 1)
 				RequestFrame(RespawnClient, client);
 
 			delete cvRespawn;
 		}
 	}
+
+#if defined _FullUpdate_Included
+	if (g_bFullUpdate)
+		ClientFullUpdate(client);
+#endif
 }
 
 stock void RespawnClient(int client)
@@ -317,6 +391,11 @@ stock void MirrorOff(int client, bool notify = true)
 
 	g_bMirror[client] = false;
 
+#if defined _FullUpdate_Included
+	if (g_bFullUpdate)
+		ClientFullUpdate(client);
+#endif
+
 	if (notify)
 		CPrintToChat(client, "{darkblue}[Mirror]{default} is {red}OFF{default}.");
 }
@@ -340,4 +419,20 @@ stock bool IsValidClient(int client, bool bots = false, bool bAlive = false)
 		return true;
 	}
 	return false;
+}
+
+stock int CountTeam(int team, bool aliveOnly, int ignoreClient = 0)
+{
+	int count = 0;
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == ignoreClient || !IsClientInGame(i))
+			continue;
+		if (GetClientTeam(i) != team)
+			continue;
+		if (aliveOnly && !IsPlayerAlive(i))
+			continue;
+		count++;
+	}
+	return count;
 }
