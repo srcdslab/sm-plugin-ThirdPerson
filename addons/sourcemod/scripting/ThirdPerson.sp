@@ -205,9 +205,12 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 	if (IsValidClient(client, true, false) && (g_bThirdPerson[client] || g_bMirror[client]))
 	{
 		if (g_cvDebug.BoolValue)
+		{
+			int iTeam = GetClientTeam(client);
 			LogMessage("[ThirdPerson] player_death | %L thirdperson=%d mirror=%d team=%d roundEnding=%d teammatesAlive=%d",
-				client, g_bThirdPerson[client], g_bMirror[client], GetClientTeam(client),
-				g_bRoundEnding, CountTeam(GetClientTeam(client), true, client));
+				client, g_bThirdPerson[client], g_bMirror[client], iTeam,
+				g_bRoundEnding, CountTeam(iTeam, true, client));
+		}
 
 		int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
 		if (g_bZombieReloaded && IsValidClient(attacker, false))
@@ -298,6 +301,8 @@ stock void FixClientUI(int client)
 	if (currentTeam <= CS_TEAM_SPECTATOR)
 		return;
 
+	int iTeammatesAlive = CountTeam(currentTeam, true, client);
+
 	/**
 	 * Never juggle the client's team while the round is ending, or once this
 	 * client's team has no other alive members (the round is about to be
@@ -310,11 +315,11 @@ stock void FixClientUI(int client)
 	 * were already cleared by ThirdPersonOff()/MirrorOff()) and let
 	 * ZR / TeamManager own the team state.
 	 */
-	if (g_bRoundEnding || CountTeam(currentTeam, true, client) == 0)
+	if (g_bRoundEnding || iTeammatesAlive == 0)
 	{
 		if (g_cvDebug.BoolValue)
 			LogMessage("[ThirdPerson] FixClientUI: skipped team refresh for %L (roundEnding=%d, teammatesAlive=%d)",
-				client, g_bRoundEnding, CountTeam(currentTeam, true, client));
+				client, g_bRoundEnding, iTeammatesAlive);
 
 #if defined _FullUpdate_Included
 		if (g_bFullUpdate)
