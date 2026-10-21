@@ -27,7 +27,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.3.6"
+	version = "1.3.7"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -57,7 +57,7 @@ public void OnConVarChanged(ConVar cvar, const char[] oldVal, const char[] newVa
 {
 	if(cvar == g_cvAllowThirdPerson && StringToInt(newVal) != 1)
 	{
-		SetConVarInt(g_cvAllowThirdPerson, 1);
+		g_cvAllowThirdPerson.SetInt(1);
 	}
 }
 
@@ -173,22 +173,22 @@ public Action Command_ThirdPerson(int client, int args)
 
 public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
-	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	int client = GetClientOfUserId(event.GetInt("userid"));
 	if (IsValidClient(client, true, false) && (g_bThirdPerson[client] || g_bMirror[client]))
 	{
-		int attacker = GetClientOfUserId(GetEventInt(event, "attacker"));
+		int attacker = GetClientOfUserId(event.GetInt("attacker"));
 		if (g_bZombieReloaded && IsValidClient(attacker, false))
 		{
 			char sValue[256] = "zombie_claws_of_death";
 
 			ConVar cvInfectEventWeapon = FindConVar("zr_infect_event_weapon");
 			if (cvInfectEventWeapon != null)
-				GetConVarString(cvInfectEventWeapon, sValue, sizeof(sValue));
+				cvInfectEventWeapon.GetString(sValue, sizeof(sValue));
 
 			delete cvInfectEventWeapon;
 
 			char sWeapon[64];
-			GetEventString(event, "weapon", sWeapon, sizeof(sWeapon));
+			event.GetString("weapon", sWeapon, sizeof(sWeapon));
 
 			if (!StrEqual(sWeapon, sValue, false))
 				ResetClient(client, true);
@@ -203,7 +203,7 @@ public Action Event_PlayerDeath(Event event, const char[] name, bool dontBroadca
 
 public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	int client = GetClientOfUserId(event.GetInt("userid"));
 	if (IsValidClient(client, true))
 	{
 		ResetClient(client);
@@ -311,7 +311,7 @@ stock void MirrorOff(int client, bool notify = true)
 	if (!IsFakeClient(client))
 	{
 		char sValue[6];
-		GetConVarString(g_cvForceCamera, sValue, 6);
+		g_cvForceCamera.GetString(sValue, 6);
 		SendConVarValue(client, g_cvForceCamera, sValue);
 	}
 
