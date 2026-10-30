@@ -15,8 +15,6 @@ bool g_bThirdPerson[MAXPLAYERS + 1] = { false, ... };
 bool g_bMirror[MAXPLAYERS + 1] = { false, ... };
 
 bool g_bZombieReloaded = false;
-bool g_bZombieSpawned = false;
-bool g_bTeamManager = false;
 bool g_bFullUpdate = false;
 
 ConVar g_cvAllowThirdPerson;
@@ -46,7 +44,6 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_tp", Command_ThirdPerson, "Toggle thirdperson");
 	RegConsoleCmd("sm_mirror", Command_Mirror, "Toggle Rotational Thirdperson view");
 
-	HookEvent("round_start", Event_RoundStart, EventHookMode_Pre);
 	HookEvent("player_death", Event_PlayerDeath);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 
@@ -64,7 +61,6 @@ public void OnConVarChanged(ConVar cvar, const char[] oldVal, const char[] newVa
 public void OnAllPluginsLoaded()
 {
 	g_bZombieReloaded = LibraryExists("zombiereloaded");
-	g_bTeamManager = LibraryExists("TeamManager");
 	g_bFullUpdate = LibraryExists("FullUpdate");
 }
 
@@ -73,10 +69,6 @@ public void OnLibraryAdded(const char[] name)
 	if (strcmp(name, "zombiereloaded", false) == 0)
 	{
 		g_bZombieReloaded = true;
-	}
-	else if (strcmp(name, "TeamManager", false) == 0)
-	{
-		g_bTeamManager = true;
 	}
 	else if (strcmp(name, "FullUpdate", false) == 0)
 	{
@@ -89,10 +81,6 @@ public void OnLibraryRemoved(const char[] name)
 	if (strcmp(name, "zombiereloaded", false) == 0)
 	{
 		g_bZombieReloaded = false;
-	}
-	else if (strcmp(name, "TeamManager", false) == 0)
-	{
-		g_bTeamManager = false;
 	}
 	else if (strcmp(name, "FullUpdate", false) == 0)
 	{
@@ -112,11 +100,6 @@ public void OnClientDisconnect(int client)
 	g_bMirror[client] = false;
 }
 
-public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
-{
-	g_bZombieSpawned = false;
-}
-
 public Action Command_Mirror(int client, int args)
 {
 	if(!IsValidClient(client, true, true))
@@ -124,14 +107,6 @@ public Action Command_Mirror(int client, int args)
 		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
 		return Plugin_Handled;
 	}
-
-#if defined _zr_included
-	if(!g_bZombieSpawned)
-	{
-		CReplyToCommand(client, "{green}[SM] {default}You may not use this command as there is no zombie spawned.");
-		return Plugin_Handled;
-	}
-#endif
 
 	if(g_bThirdPerson[client])
 		ThirdPersonOff(client, false);
@@ -151,14 +126,6 @@ public Action Command_ThirdPerson(int client, int args)
 		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
 		return Plugin_Handled;
 	}
-
-#if defined _zr_included
-	if(!g_bZombieSpawned)
-	{
-		CReplyToCommand(client, "{green}[SM] {default}You may not use this command as there is no zombie spawned.");
-		return Plugin_Handled;
-	}
-#endif
 
 	if (g_bMirror[client])
 		MirrorOff(client);
@@ -211,14 +178,6 @@ public Action Event_PlayerSpawn(Event event, const char[] name, bool dontBroadca
 	return Plugin_Continue;
 }
 
-#if defined _zr_included
-public void ZR_OnClientInfected(int client, int attacker, bool motherInfect, bool respawnOverride, bool respawn)
-{
-	if (motherInfect && g_bTeamManager)
-		g_bZombieSpawned = true;
-}
-#endif
-
 void ThirdPersonOn(int client)
 {
 	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", 0);
@@ -262,27 +221,36 @@ stock void ResetClient(int client, bool bFixUI = false)
 stock void FixClientUI(int client)
 {
 	int currentTeam = GetClientTeam(client);
-	ChangeClientTeam(client, CS_TEAM_SPECTATOR);
-	if (!g_bZombieReloaded)
-		CS_SwitchTeam(client, currentTeam);
-	else
-	{
-		CS_SwitchTeam(client, CS_TEAM_T);
-		if (!IsPlayerAlive(client))
-		{
-			ConVar cvRespawn = FindConVar("zr_respawn");
-			if (cvRespawn.IntValue == 1)
-				RequestFrame(RespawnClient, client);
+	if (currentTeam < CS_TEAM_T)
+		return;
 
-			delete cvRespawn;
-		}
+	ChangeClientTeam(client, CS_TEAM_SPECTATOR);
+
+	// Always put the client back in their own team: forcing CS_TEAM_T before the mother zombie
+	// spawned gives the engine a spawnable T and it restarts the round (Game_Commencing).
+	CS_SwitchTeam(client, currentTeam);
+
+	if (g_bZombieReloaded && !IsPlayerAlive(client))
+	{
+		ConVar cvRespawn = FindConVar("zr_respawn");
+		if (cvRespawn != null && cvRespawn.IntValue == 1)
+			RequestFrame(RespawnClient, GetClientUserId(client));
+
+		delete cvRespawn;
 	}
 }
 
-stock void RespawnClient(int client)
+stock void RespawnClient(int userid)
 {
-	if (IsClientInGame(client))
-		CS_RespawnPlayer(client);
+	int client = GetClientOfUserId(userid);
+	if (!client || IsPlayerAlive(client))
+		return;
+
+	// The client may have been moved to spectator in the meantime (e.g. sm_spec)
+	if (GetClientTeam(client) < CS_TEAM_T)
+		return;
+
+	CS_RespawnPlayer(client);
 }
 
 stock void MirrorOn(int client, bool notify = true)
