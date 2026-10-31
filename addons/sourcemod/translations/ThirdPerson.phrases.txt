@@ -1,0 +1,53 @@
+"Phrases"
+{
+	"Not Alive"
+	{
+		"en"		"You may not use this command as you are not alive."
+		"fr"		"Vous ne pouvez pas utiliser cette commande car vous n'êtes pas en vie."
+		"ru"		"Вы не можете использовать эту команду, так как вы мертвы."
+		"es"		"No puedes usar este comando porque no estás vivo."
+		"de"		"Du kannst diesen Befehl nicht benutzen, da du nicht am Leben bist."
+		"pt"		"Você não pode usar este comando porque não está vivo."
+		"chi"		"你没有存活，无法使用此命令。"
+	}
+	"ThirdPerson On"
+	{
+		"en"		"is {green}ON{default}."
+		"fr"		"est {green}activé{default}."
+		"ru"		"{green}включён{default}."
+		"es"		"está {green}ACTIVADO{default}."
+		"de"		"ist {green}AN{default}."
+		"pt"		"está {green}ATIVADO{default}."
+		"chi"		"已{green}开启{default}。"
+	}
+	"ThirdPerson Off"
+	{
+		"en"		"is {red}OFF{default}."
+		"fr"		"est {red}désactivé{default}."
+		"ru"		"{red}выключен{default}."
+		"es"		"está {red}DESACTIVADO{default}."
+		"de"		"ist {red}AUS{default}."
+		"pt"		"está {red}DESATIVADO{default}."
+		"chi"		"已{red}关闭{default}。"
+	}
+	"Mirror On"
+	{
+		"en"		"is {green}ON{default}."
+		"fr"		"est {green}activé{default}."
+		"ru"		"{green}включён{default}."
+		"es"		"está {green}ACTIVADO{default}."
+		"de"		"ist {green}AN{default}."
+		"pt"		"está {green}ATIVADO{default}."
+		"chi"		"已{green}开启{default}。"
+	}
+	"Mirror Off"
+	{
+		"en"		"is {red}OFF{default}."
+		"fr"		"est {red}désactivé{default}."
+		"ru"		"{red}выключен{default}."
+		"es"		"está {red}DESACTIVADO{default}."
+		"de"		"ist {red}AUS{default}."
+		"pt"		"está {red}DESATIVADO{default}."
+		"chi"		"已{red}关闭{default}。"
+	}
+}
