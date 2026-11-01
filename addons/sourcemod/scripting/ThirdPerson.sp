@@ -25,7 +25,7 @@ public Plugin myinfo =
 	name = "ThirdPerson",
 	author = "BotoX, maxime1907, .Rushaway",
 	description = "Allow players/admins to toggle thirdperson on themselves/players.",
-	version = "1.3.7"
+	version = "1.3.8"
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -40,6 +40,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
+	LoadTranslations("ThirdPerson.phrases");
+
 	RegConsoleCmd("sm_thirdperson", Command_ThirdPerson, "Toggle thirdperson");
 	RegConsoleCmd("sm_tp", Command_ThirdPerson, "Toggle thirdperson");
 	RegConsoleCmd("sm_mirror", Command_Mirror, "Toggle Rotational Thirdperson view");
@@ -104,7 +106,7 @@ public Action Command_Mirror(int client, int args)
 {
 	if(!IsValidClient(client, true, true))
 	{
-		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
+		ReplyToCommand(client, "[SM] %t", "Not Alive");
 		return Plugin_Handled;
 	}
 
@@ -123,7 +125,7 @@ public Action Command_ThirdPerson(int client, int args)
 {
 	if(!IsValidClient(client, true, true))
 	{
-		ReplyToCommand(client, "[SM] You may not use this command as you are not alive.");
+		ReplyToCommand(client, "[SM] %t", "Not Alive");
 		return Plugin_Handled;
 	}
 
@@ -187,7 +189,7 @@ void ThirdPersonOn(int client)
 
 	g_bThirdPerson[client] = true;
 
-	CPrintToChat(client, "{darkblue}[ThirdPerson]{default} is {green}ON{default}.");
+	CPrintToChat(client, "{darkblue}[ThirdPerson]{default} %t", "ThirdPerson On");
 }
 
 void ThirdPersonOff(int client, bool notify = true)
@@ -205,7 +207,7 @@ void ThirdPersonOff(int client, bool notify = true)
 #endif
 
 	if (notify)
-		CPrintToChat(client, "{darkblue}[ThirdPerson]{default} is {red}OFF{default}.");
+		CPrintToChat(client, "{darkblue}[ThirdPerson]{default} %t", "ThirdPerson Off");
 }
 
 stock void ResetClient(int client, bool bFixUI = false)
@@ -266,7 +268,7 @@ stock void MirrorOn(int client, bool notify = true)
 	g_bMirror[client] = true;
 
 	if (notify)
-		CPrintToChat(client, "{darkblue}[Mirror]{default} is {green}ON{default}.");
+		CPrintToChat(client, "{darkblue}[Mirror]{default} %t", "Mirror On");
 }
 
 stock void MirrorOff(int client, bool notify = true)
@@ -286,7 +288,7 @@ stock void MirrorOff(int client, bool notify = true)
 	g_bMirror[client] = false;
 
 	if (notify)
-		CPrintToChat(client, "{darkblue}[Mirror]{default} is {red}OFF{default}.");
+		CPrintToChat(client, "{darkblue}[Mirror]{default} %t", "Mirror Off");
 }
 
 public int Native_Mirror(Handle plugin, int params)
