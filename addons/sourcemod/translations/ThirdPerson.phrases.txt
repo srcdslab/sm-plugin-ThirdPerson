@@ -9,6 +9,12 @@
 		"de"		"Du kannst diesen Befehl nicht benutzen, da du nicht am Leben bist."
 		"pt"		"Você não pode usar este comando porque não está vivo."
 		"chi"		"你没有存活，无法使用此命令。"
+		"pl"		"Nie możesz użyć tej komendy, ponieważ nie żyjesz."
+		"tr"		"Bu komutu kullanamazsın çünkü hayatta değilsin."
+		"it"		"Non puoi usare questo comando perché non sei vivo."
+		"ua"		"Ви не можете використати цю команду, бо ви не живі."
+		"zho"		"你無法使用此指令，因為你已經死亡。"
+		"cze"		"Tento příkaz nemůžeš použít, protože nejsi naživu."
 	}
 	"ThirdPerson On"
 	{
@@ -19,6 +25,12 @@
 		"de"		"ist {green}AN{default}."
 		"pt"		"está {green}ATIVADO{default}."
 		"chi"		"已{green}开启{default}。"
+		"pl"		"jest {green}WŁĄCZONY{default}."
+		"tr"		"{green}AÇIK{default}."
+		"it"		"è {green}ATTIVO{default}."
+		"ua"		"{green}увімкнено{default}."
+		"zho"		"已{green}開啟{default}。"
+		"cze"		"je {green}ZAPNUTO{default}."
 	}
 	"ThirdPerson Off"
 	{
@@ -29,6 +41,12 @@
 		"de"		"ist {red}AUS{default}."
 		"pt"		"está {red}DESATIVADO{default}."
 		"chi"		"已{red}关闭{default}。"
+		"pl"		"jest {red}WYŁĄCZONY{default}."
+		"tr"		"{red}KAPALI{default}."
+		"it"		"è {red}DISATTIVATO{default}."
+		"ua"		"{red}вимкнено{default}."
+		"zho"		"已{red}關閉{default}。"
+		"cze"		"je {red}VYPNUTO{default}."
 	}
 	"Mirror On"
 	{
@@ -39,6 +57,12 @@
 		"de"		"ist {green}AN{default}."
 		"pt"		"está {green}ATIVADO{default}."
 		"chi"		"已{green}开启{default}。"
+		"pl"		"jest {green}WŁĄCZONY{default}."
+		"tr"		"{green}AÇIK{default}."
+		"it"		"è {green}ATTIVO{default}."
+		"ua"		"{green}увімкнено{default}."
+		"zho"		"已{green}開啟{default}。"
+		"cze"		"je {green}ZAPNUTO{default}."
 	}
 	"Mirror Off"
 	{
@@ -49,5 +73,11 @@
 		"de"		"ist {red}AUS{default}."
 		"pt"		"está {red}DESATIVADO{default}."
 		"chi"		"已{red}关闭{default}。"
+		"pl"		"jest {red}WYŁĄCZONY{default}."
+		"tr"		"{red}KAPALI{default}."
+		"it"		"è {red}DISATTIVATO{default}."
+		"ua"		"{red}вимкнено{default}."
+		"zho"		"已{red}關閉{default}。"
+		"cze"		"je {red}VYPNUTO{default}."
 	}
 }
